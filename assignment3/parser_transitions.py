@@ -55,13 +55,16 @@ class PartialParse(object):
         ###         3. Right Arc
 
         if transition == 'S':
-            self.stack.append(self.buffer.pop(0))
+            if len(self.buffer) > 0:
+                self.stack.append(self.buffer.pop(0))
         elif transition == 'LA':
-            self.dependencies.append((self.stack[-1], self.stack[-2]))
-            self.stack.pop(-2)
+            if len(self.stack) >= 2:
+                self.dependencies.append((self.stack[-1], self.stack[-2]))
+                self.stack.pop(-2)
         elif transition == 'RA':
-            self.dependencies.append((self.stack[-2], self.stack[-1]))
-            self.stack.pop(-1)
+            if len(self.stack) >= 2:
+                self.dependencies.append((self.stack[-2], self.stack[-1]))
+                self.stack.pop(-1)
 
 
         ### END YOUR CODE
@@ -127,8 +130,7 @@ def minibatch_parse(sentences, model, batch_size):
             if len(p.stack) == 1 and len(p.buffer) == 0:
                 unfinished_parses.pop(idx)
     
-    for p in partial_parses:
-        dependencies.append(p.dependencies)
+    dependencies = [p.dependencies for p in partial_parses]
 
     ### END YOUR CODE
 
