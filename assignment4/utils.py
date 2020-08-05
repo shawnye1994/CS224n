@@ -31,10 +31,10 @@ def pad_sents(sents, pad_token):
         each sentences in the batch now has equal length.
     """
     sents_padded = []
-
+    
     ### YOUR CODE HERE (~6 Lines)
-
-
+    max_length = max([len(s) for s in sents])
+    sents_padded = [s + [pad_token] * (max_length - len(s)) for s in sents]
 
     ### END YOUR CODE
 
@@ -79,4 +79,3 @@ def batch_iter(data, batch_size, shuffle=False):
         tgt_sents = [e[1] for e in examples]
 
         yield src_sents, tgt_sents
-
