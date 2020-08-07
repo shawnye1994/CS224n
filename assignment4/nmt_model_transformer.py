@@ -25,9 +25,8 @@ Hypothesis = namedtuple('Hypothesis', ['value', 'score'])
 
 class NMT(nn.Module):
     """ Simple Neural Machine Translation Model:
-        - Bidrectional LSTM Encoder
-        - Unidirection LSTM Decoder
-        - Global Attention Model (Luong, et al. 2015)
+        - Transformer Encoder
+        - Transformer Decoder
     """
     def __init__(self, embed_size, hidden_size, vocab, dropout_rate=0.2):
         """ Init NMT Model.
@@ -40,8 +39,6 @@ class NMT(nn.Module):
         """
         super(NMT, self).__init__()
         self.model_embeddings = ModelEmbeddings(embed_size, vocab)
-        self.hidden_size = hidden_size
-        self.dropout_rate = dropout_rate
         self.vocab = vocab
 
         # default values
