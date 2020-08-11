@@ -30,7 +30,7 @@ class Highway(nn.Module):
 
         x_proj = self.relu(self.Linear1(x_conv_out))
         x_gate = self.sigmoid(self.Linear2(x_conv_out))
-        x_highway = x_conv_out * x_proj + (1 - x_gate) * x_conv_out
+        x_highway = x_gate * x_proj + (1 - x_gate) * x_conv_out
 
         return x_highway
 
