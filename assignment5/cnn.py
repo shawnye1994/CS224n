@@ -32,7 +32,8 @@ class CNN(nn.Module):
         max_sentence_length, batch_size, _, max_word_length = char_embeds.size()
         char_embeds = char_embeds.view(-1, self.e_char, max_word_length)
         x_conv_out = self.relu(self.conv1d(char_embeds))
-        x_conv_out, _ = torch.max(x_conv_out, dim = -1)
+       #x_conv_out, _ = torch.max(x_conv_out, dim = -1)
+        x_conv_out = nn.MaxPool1d(x_conv_out.size(-1))(x_conv_out)
         x_conv_out = x_conv_out.view(max_sentence_length, batch_size, self.e_word)
 
         return x_conv_out

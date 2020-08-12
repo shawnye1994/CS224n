@@ -121,9 +121,10 @@ class NMT(nn.Module):
         enc_masks = self.generate_sent_masks(enc_hiddens, source_lengths)
         combined_outputs = self.decode(enc_hiddens, enc_masks, dec_init_state, target_padded)
         P = F.log_softmax(self.target_vocab_projection(combined_outputs), dim=-1)
-
+        print("P", P.sum())
         # Zero out, probabilities for which we have nothing in the target text
         target_masks = (target_padded != self.vocab.tgt['<pad>']).float()
+        print("mask", target_masks.sum())
         
         # Compute log probability of generating true target words
         target_gold_words_log_prob = torch.gather(P, index=target_padded[1:].unsqueeze(-1), dim=-1).squeeze(-1) * target_masks[1:]

@@ -5,9 +5,9 @@
 CS224N 2019-20: Homework 5
 """
 
+
 import torch
 import torch.nn as nn
-
 
 class CharDecoder(nn.Module):
     def __init__(self, hidden_size, char_embedding_size=50, target_vocab=None):
@@ -37,13 +37,11 @@ class CharDecoder(nn.Module):
         ### TODO - Implement the forward pass of the character decoder.
         char_embeds = self.decoderCharEmb(input)
         if dec_hidden is not None:
-            h_0, c_0 = dec_hidden
-            dec_hiddens, (h_n, c_n) = self.charDecoder(char_embeds, (h_0, c_0))
+            output, (h_n, c_n) = self.charDecoder(char_embeds, dec_hidden)
         else:
-            dec_hiddens, (h_n, c_n) = self.charDecoder(char_embeds)
+            output, (h_n, c_n) = self.charDecoder(char_embeds)
         
-
-        scores = self.char_output_projection(dec_hiddens)
+        scores = self.char_output_projection(output)
 
         return scores, (h_n, c_n)
         ### END YOUR CODE
@@ -71,16 +69,18 @@ class CharDecoder(nn.Module):
         scores = torch.flatten(scores, start_dim = 0, end_dim = 1)
         targets = torch.flatten(targets)
 
-        #mask = torch.zeros_like(scores)
+        """
         zero_loss_index = (targets == pad_idx).nonzero().squeeze(-1)
 
         loss = nn.CrossEntropyLoss(reduction = 'none')(scores, targets)
-        loss[[zero_loss_index]] = 0
+        #loss[[zero_loss_index]] = 0
         loss = torch.sum(loss)
-
+        """
+        loss = nn.CrossEntropyLoss(ignore_index = pad_idx, reduction = 'sum')(scores, targets)
         return loss
         ### END YOUR CODE
-
+        
+    
     def decode_greedy(self, initialStates, device, max_length=21):
         """ Greedy decoding
         @param initialStates (tuple(Tensor, Tensor)): initial internal state of the LSTM, a tuple of two tensors of size (1, batch_size, hidden_size)
@@ -103,36 +103,27 @@ class CharDecoder(nn.Module):
 
         h_0, c_0 = initialStates
         _, batch_size, hidden_size = h_0.size()
-        current_char_idxs = torch.ones(1, batch_size, dtype = torch.long) * self.target_vocab.start_of_word
+        current_char_idxs = torch.ones(1, batch_size, dtype = torch.long, device = device) * self.target_vocab.start_of_word
 
-        decoded_char_lists = [[]] * batch_size
+        output_word = torch.empty(0, batch_size, dtype=torch.long , device=device)
         for i in range(max_length):
-            current_char_embedding = self.decoderCharEmb(current_char_idxs)
-            dec_hiddens, (h_0, c_0) = self.charDecoder(current_char_embedding, (h_0, c_0))
-            
-            scores = self.char_output_projection(dec_hiddens)
+            scores, (h_0, c_0) = self.forward(current_char_idxs, (h_0, c_0))
             p = nn.Softmax(dim = -1)(scores)
             current_char_idxs = torch.argmax(p, dim = -1)
-
-            for b in range(batch_size):
-                decoded_char_lists[b].append(self.target_vocab.id2char[current_char_idxs[0, b].item()])
+            output_word = torch.cat((output_word, current_char_idxs), dim=0)
         
-        print(decoded_char_lists)
         decodedWords = []
         for b in range(batch_size):
-            char_list = decoded_char_lists[b]
+            char_idx_list = output_word[:, b].tolist()
+            chars_list = [self.target_vocab.id2char[i] for i in char_idx_list]
             w = ''
-            for c in char_list:
+            for c in chars_list:
                 if c != "{" and c != "}":
                     w += c
                 else:
                     break
-            
             decodedWords.append(w)
 
         return decodedWords
 
-
-
         ### END YOUR CODE
-

@@ -42,7 +42,8 @@ class ModelEmbeddings(nn.Module):
         self.word_embed_size = word_embed_size
         self.vocab = vocab
         self.e_char = 50
-        self.char_embeddings = nn.Embedding(len(self.vocab.char2id), self.e_char)
+        self.char_embeddings = nn.Embedding(len(self.vocab.char2id), self.e_char,
+                                                padding_idx = vocab.char_pad)
 
         self.cnn = CNN(self.word_embed_size, self.e_char)
         self.highway = Highway(self.word_embed_size)
