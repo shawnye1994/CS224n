@@ -35,7 +35,17 @@ class CharDecoder(nn.Module):
         """
         ### YOUR CODE HERE for part 2a
         ### TODO - Implement the forward pass of the character decoder.
+        char_embeds = self.decoderCharEmb(input)
+        if dec_hidden is not None:
+            h_0, c_0 = dec_hidden
+            dec_hiddens, (h_n, c_n) = self.charDecoder(char_embeds, (h_0, c_0))
+        else:
+            dec_hiddens, (h_n, c_n) = self.charDecoder(char_embeds)
+        
 
+        scores = self.char_output_projection(dec_hiddens)
+
+        return scores, (h_n, c_n)
         ### END YOUR CODE
 
     def train_forward(self, char_sequence, dec_hidden=None):
@@ -53,7 +63,22 @@ class CharDecoder(nn.Module):
         ###       - char_sequence corresponds to the sequence x_1 ... x_{n+1} (e.g., <START>,m,u,s,i,c,<END>). Read the handout about how to construct input and target sequence of CharDecoderLSTM.
         ###       - Carefully read the documentation for nn.CrossEntropyLoss and our handout to see what this criterion have already included:
         ###             https://pytorch.org/docs/stable/nn.html#crossentropyloss
+        pad_idx = self.target_vocab.char_pad
+        inputs = char_sequence[0:-1, :]
+        targets = char_sequence[1:, :]
 
+        scores, _ = self.forward(inputs, dec_hidden)
+        scores = torch.flatten(scores, start_dim = 0, end_dim = 1)
+        targets = torch.flatten(targets)
+
+        #mask = torch.zeros_like(scores)
+        zero_loss_index = (targets == pad_idx).nonzero().squeeze(-1)
+
+        loss = nn.CrossEntropyLoss(reduction = 'none')(scores, targets)
+        loss[[zero_loss_index]] = 0
+        loss = torch.sum(loss)
+
+        return loss
         ### END YOUR CODE
 
     def decode_greedy(self, initialStates, device, max_length=21):
@@ -75,6 +100,39 @@ class CharDecoder(nn.Module):
         ###      - You may find torch.argmax or torch.argmax useful
         ###      - We use curly brackets as start-of-word and end-of-word characters. That is, use the character '{' for <START> and '}' for <END>.
         ###        Their indices are self.target_vocab.start_of_word and self.target_vocab.end_of_word, respectively.
+
+        h_0, c_0 = initialStates
+        _, batch_size, hidden_size = h_0.size()
+        current_char_idxs = torch.ones(1, batch_size, dtype = torch.long) * self.target_vocab.start_of_word
+
+        decoded_char_lists = [[]] * batch_size
+        for i in range(max_length):
+            current_char_embedding = self.decoderCharEmb(current_char_idxs)
+            dec_hiddens, (h_0, c_0) = self.charDecoder(current_char_embedding, (h_0, c_0))
+            
+            scores = self.char_output_projection(dec_hiddens)
+            p = nn.Softmax(dim = -1)(scores)
+            current_char_idxs = torch.argmax(p, dim = -1)
+
+            for b in range(batch_size):
+                decoded_char_lists[b].append(self.target_vocab.id2char[current_char_idxs[0, b].item()])
+        
+        print(decoded_char_lists)
+        decodedWords = []
+        for b in range(batch_size):
+            char_list = decoded_char_lists[b]
+            w = ''
+            for c in char_list:
+                if c != "{" and c != "}":
+                    w += c
+                else:
+                    break
+            
+            decodedWords.append(w)
+
+        return decodedWords
+
+
 
         ### END YOUR CODE
 
